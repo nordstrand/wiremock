@@ -72,7 +72,7 @@ public class ProxyAcceptanceTest {
 	public void successfullyGetsResponseFromOtherServiceViaProxy() {
         initWithDefaultConfig();
 
-		targetServiceAdmin.register(get(urlEqualTo("/proxied/resource?param=value"))
+		targetServiceAdmin.register(get(urlEqualTo("/proxied/resource?param=value")).withHeader("a", equalTo("b"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "text/plain")
@@ -80,7 +80,8 @@ public class ProxyAcceptanceTest {
 
         proxyingServiceAdmin.register(any(urlEqualTo("/proxied/resource?param=value")).atPriority(10)
 				.willReturn(aResponse()
-				.proxiedFrom(TARGET_SERVICE_BASE_URL)));
+				.proxiedFrom(TARGET_SERVICE_BASE_URL)
+				.withInjectedHeader("a", "b")));
 		
 		WireMockResponse response = testClient.get("/proxied/resource?param=value");
 		
