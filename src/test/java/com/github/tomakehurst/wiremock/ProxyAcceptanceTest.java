@@ -68,11 +68,32 @@ public class ProxyAcceptanceTest {
         proxyingService.stop();
 	}
 	
-	@Test
 	public void successfullyGetsResponseFromOtherServiceViaProxy() {
         initWithDefaultConfig();
 
-		targetServiceAdmin.register(get(urlEqualTo("/proxied/resource?param=value")).withHeader("a", equalTo("b"))
+		targetServiceAdmin.register(get(urlEqualTo("/proxied/resource?param=value"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/plain")
+                        .withBody("Proxied content")));
+
+        proxyingServiceAdmin.register(any(urlEqualTo("/proxied/resource?param=value")).atPriority(10)
+				.willReturn(aResponse()
+				.proxiedFrom(TARGET_SERVICE_BASE_URL)));
+		
+		WireMockResponse response = testClient.get("/proxied/resource?param=value");
+		
+		assertThat(response.content(), is("Proxied content"));
+		assertThat(response.firstHeader("Content-Type"), is("text/plain"));
+	}
+	
+	@Test
+	public void successfullyGetsResponseFromOtherServiceViaProxyInjectingHeaders() {
+        initWithDefaultConfig();
+
+		targetServiceAdmin.register(get(urlEqualTo("/proxied/resource?param=value"))
+				.withHeader("a", equalTo("b"))
+				.withHeader("c", equalTo("d"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "text/plain")
@@ -81,7 +102,8 @@ public class ProxyAcceptanceTest {
         proxyingServiceAdmin.register(any(urlEqualTo("/proxied/resource?param=value")).atPriority(10)
 				.willReturn(aResponse()
 				.proxiedFrom(TARGET_SERVICE_BASE_URL)
-				.withInjectedHeader("a", "b")));
+				.withInjectedHeader("a", "b")
+				.withInjectedHeader("c", "d")));
 		
 		WireMockResponse response = testClient.get("/proxied/resource?param=value");
 		
